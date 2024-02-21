@@ -1,0 +1,24 @@
+# custom
+raw_obs_data/
+ray_results/
+log_batch18/
+log/
+log
+
+# data
+parking
+*.data
+*.pt
+*.jpg
+*.png
+*.csv
+data/
+
+# python
+__pycache__
+*.pyc
+
+# vscode
+.vscode
+*.code-workspace
+.VSCodeCounter
