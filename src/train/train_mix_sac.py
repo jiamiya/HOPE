@@ -3,29 +3,22 @@ sys.path.append("..")
 sys.path.append(".")
 import time
 import os
-# os.environ["SDL_VIDEODRIVER"]="dummy"
-# os.environ["CUDA_VISIBLE_DEVICES"] = '3'
-# os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-from typing import DefaultDict
 from shutil import copyfile
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-# from model.MultiModalPPO_AF import PPO
 from model.agent.sac_agent import SACAgent as SAC
 from model.agent.parking_agent import ParkingAgent, RsPlanner
 from env.car_parking_base import CarParking
 from env.env_wrapper import CarParkingWrapper
 from env.vehicle import VALID_SPEED,Status
-# from eval_ppo_multi_af import eval
 from evaluation.eval_utils import eval
 from configs import *
 
-IMG_ENCODER_PATH = ["./log/ae/20230825_132652/ae_True.pt", './log/ae/ae_True.pt'][1]
-USE_RS_PLANNER = False
 
 class SceneChoose():
     def __init__(self) -> None:
@@ -106,34 +99,41 @@ class DlpCaseChoose():
     def update_success_record(self, success:int, case_id:int):
         self.case_success_rate[str(case_id)].append(success)
         self.case_record.append(case_id)
-        
-
 
 
 if __name__=="__main__":
-    save = True
-    verbose = False
 
-    raw_env = CarParking(fps=100, verbose=verbose,render_mode='rgb_array')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--agent_ckpt', type=str, default=None) # './model/ckpt/SAC.pt'
+    parser.add_argument('--img_ckpt', type=str, default='./model/ckpt/autoencoder.pt')
+    parser.add_argument('--train_episode', type=int, default=100000)
+    parser.add_argument('--eval_episode', type=int, default=2000)
+    parser.add_argument('--verbose', type=bool, default=True)
+    parser.add_argument('--visualize', type=bool, default=True)
+    args = parser.parse_args()
+
+    verbose = args.verbose
+
+
+    if args.visualize:
+        raw_env = CarParking(fps=100, verbose=verbose,)
+    else:
+        raw_env = CarParking(fps=100, verbose=verbose, render_mode='rgb_array')
     env = CarParkingWrapper(raw_env)
     scene_chooser = SceneChoose()
     dlp_case_chooser = DlpCaseChoose()
 
     # the path to log and save model
-    relative_path = '.'#os.path.dirname(os.getcwd())
+    relative_path = '.'
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    save_path = relative_path+'/log/ppo_mixed/sac_%s/' % timestamp
+    save_path = relative_path+'/log/exp/sac_%s/' % timestamp
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-
     writer = SummaryWriter(save_path)
     # configs log
-    copyfile('../configs.py', save_path+'configs.txt')
+    copyfile('./configs.py', save_path+'configs.txt')
     print("You can track the training process by command 'tensorboard --log-dir %s'" % save_path)
-
-    act_dim = env.action_space.shape[0]
-    stop_reason_cnt = DefaultDict(int)
 
     seed = SEED
     env.seed(seed)
@@ -141,14 +141,8 @@ if __name__=="__main__":
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    print('use_lidar_observation:', env.use_lidar_observation)
-    feature_size1 = env.lidar.lidar_num
-    feature_size2 = env.tgt_repr_size
-    EMBD_SIZE = 128
-    HIDD_SIZE = 256
     actor_params = ACTOR_CONFIGS
     critic_params = CRITIC_CONFIGS
-
     configs = {
         "discrete": False,
         "observation_shape": env.observation_shape,
@@ -163,25 +157,19 @@ if __name__=="__main__":
     print('observation_space:',env.observation_space)
 
     rl_agent = SAC(configs)
-    checkpoint_path = None#'./log/ppo_mixed/PPO2_49999.pt'
+    checkpoint_path = args.agent_ckpt
     if checkpoint_path is not None:
         rl_agent.load(checkpoint_path, params_only=True)
-        # rl_agent.load_actor(checkpoint_path)
-        # agent = torch.load(checkpoint_path)
         print('load pre-trained model!')
-    img_encoder_checkpoint =  IMG_ENCODER_PATH if USE_IMG else None
-    if img_encoder_checkpoint is not None:
+    img_encoder_checkpoint =  args.img_ckpt if USE_IMG else None
+    if img_encoder_checkpoint is not None and os.path.exists(img_encoder_checkpoint):
         rl_agent.load_img_encoder(img_encoder_checkpoint, require_grad=UPDATE_IMG_ENCODE)
-    # agent.action_filter.load('./log/af_100000.pt')
 
     step_ratio = env.vehicle.kinetic_model.step_len*env.vehicle.kinetic_model.n_step*VALID_SPEED[1]
-    rs_planner = RsPlanner(step_ratio) if USE_RS_PLANNER else None
+    rs_planner = RsPlanner(step_ratio)
     parking_agent = ParkingAgent(rl_agent, rs_planner)
 
 
-    
-    # for debug
-    t = time.time()
     reward_list = []
     reward_per_state_list = []
     reward_info_list = []
@@ -189,14 +177,14 @@ if __name__=="__main__":
     succ_record = []
     total_step_num = 0
     best_success_rate = [0, 0, 0, 0]
-    for i in range(100000):
+
+    for i in range(args.train_episode):
         scene_chosen = scene_chooser.choose_case()
         if scene_chosen == 'dlp':
             case_id = dlp_case_chooser.choose_case()
         else:
             case_id = None
         obs = env.reset(case_id, None, scene_chosen)
-        # env.map.obstacles.clear()
         parking_agent.reset()
         case_id_list.append(env.map.case_id)
         done = False
@@ -207,18 +195,14 @@ if __name__=="__main__":
         while not done:
             step_num += 1
             total_step_num += 1
-            # action = env.action_space.sample()
-            # t = time.time()
             if total_step_num <= parking_agent.configs.memory_size and not parking_agent.executing_rs:
-                action = env.action_space.sample() # TODO
+                action = env.action_space.sample()
                 log_prob = parking_agent.get_log_prob(obs, action)
             else:
-                action, log_prob = parking_agent.get_action(obs) # time consume: 3ms
-                # action, log_prob = parking_agent.choose_action(obs) # time consume: 3ms
+                action, log_prob = parking_agent.get_action(obs)
+                # action, log_prob = parking_agent.choose_action(obs)
 
             next_obs, reward, done, info = env.step(action)
-            # reward = 0.1 if action[0] > 0 and action[1] > 0 else -0.1
-            # print(time.time()-t)
             reward_info.append(list(info['reward_info'].values()))
             total_reward += reward
             reward_per_state_list.append(reward)
@@ -233,7 +217,6 @@ if __name__=="__main__":
                     writer.add_scalar("critic_loss", critic_loss, i)
             
             if info['path_to_dest'] is not None:
-                # pass
                 parking_agent.set_planner_path(info['path_to_dest'])
 
             if done:
@@ -263,11 +246,9 @@ if __name__=="__main__":
         reward_info = np.round(reward_info,2)
         reward_info_list.append(list(reward_info))
 
-        if i%10==0 and i>0:
+        if verbose and i%10==0 and i>0:
             print('success rate:',np.sum(succ_record),'/',len(succ_record))
-            # print(reward_list[-10:])
             print(parking_agent.log_std.detach().cpu().numpy().reshape(-1), parking_agent.alpha.detach().cpu().numpy().reshape(-1))
-            # print(agent.state_mean, agent.state_std, agent.n_state)
             print("episode:%s  average reward:%s"%(i,np.mean(reward_list[-50:])))
             print(np.mean(parking_agent.actor_loss_list[-100:]),np.mean(parking_agent.critic_loss_list[-100:]))
             print('time_cost ,rs_dist_reward ,dist_reward ,angle_reward ,box_union_reward')
@@ -292,50 +273,48 @@ if __name__=="__main__":
             f_best_log.close()
 
         if (i+1) % 2000 == 0:
-            if save:
-                parking_agent.save("%s/PPO2_%s.pt" % (save_path, i),params_only=True)
+            parking_agent.save("%s/PPO2_%s.pt" % (save_path, i),params_only=True)
         
 
-        if i%20==0:
+        if verbose and i%20==0:
             episodes = [j for j in range(len(reward_list))]
             mean_reward = [np.mean(reward_list[max(0,j-50):j+1]) for j in range(len(reward_list))]
             plt.plot(episodes,reward_list)
             plt.plot(episodes,mean_reward)
             plt.xlabel('episodes')
             plt.ylabel('reward')
-
             f = plt.gcf()
             f.savefig('%s/reward.png'%save_path)
             f.clear()
 
-    eval_episode = 2000
-    # eval on dlp
-    env.set_level('dlp')
-    log_path = save_path+'/dlp'
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-    eval(env, parking_agent, episode=eval_episode, log_path=log_path)
-    
-    # eval on extreme
-    env.set_level('Extrem')
-    log_path = save_path+'/extreme'
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-    eval(env, parking_agent, episode=eval_episode, log_path=log_path)
-    
-    # eval on complex
-    env.set_level('Complex')
-    log_path = save_path+'/complex'
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-    eval(env, parking_agent, episode=eval_episode, log_path=log_path)
-    
-    # eval on normalize
-    env.set_level('Normal')
-    log_path = save_path+'/normalize'
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
-    eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+    eval_episode = args.eval_episode
+    with torch.no_grad():
+        # eval on dlp
+        env.set_level('dlp')
+        log_path = save_path+'/dlp'
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        
+        # eval on extreme
+        env.set_level('Extrem')
+        log_path = save_path+'/extreme'
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        
+        # eval on complex
+        env.set_level('Complex')
+        log_path = save_path+'/complex'
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        
+        # eval on normalize
+        env.set_level('Normal')
+        log_path = save_path+'/normalize'
+        if not os.path.exists(log_path):
+            os.makedirs(log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
 
     env.close()
-    # print(stop_reason_cnt)

@@ -1,10 +1,4 @@
 
-
-
-
-
-from typing import Any
-
 class RsPlanner(object):
     def __init__(self, step_ratio:float) -> None:
         self.route = None
@@ -25,7 +19,7 @@ class RsPlanner(object):
             step_len = rs_path.lengths[i]/step_ratio
             action_list.append([steer, step_len])
 
-        # divide the action TODO: improve the division strategy
+        # divide the action
         filtered_actions = []
         for action in action_list:
             action[0] *= 1
@@ -59,7 +53,7 @@ class ParkingAgent(object):
         self.agent = rl_agent
         self.planner = planner
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str):
         if name.startswith('_'):
             raise AttributeError("attempted to get missing private attribute '{}'".format(name))
         return getattr(self.agent, name)

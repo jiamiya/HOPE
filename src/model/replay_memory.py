@@ -23,8 +23,8 @@ class ReplayMemory(object):
         for idx in idx_list:
             for item in self.items:
                 batches[item].append(self.memory[item][idx])
-            if idx == self.__len__()-1 or self.memory["done"][idx]: # TODO better representation for next obs
-                batches["next_state"].append(None)#np.zeros(self.memory["state"][idx].shape))
+            if idx == self.__len__()-1 or self.memory["done"][idx]:
+                batches["next_state"].append(None)
             else:
                 batches["next_state"].append(self.memory["state"][idx+1])
         for idx in batches.keys():
