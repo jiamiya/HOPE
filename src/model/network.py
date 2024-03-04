@@ -31,70 +31,6 @@ class Network(nn.Module):
         out = self.net(x)
         return out
 
-class ObsEmbedding(nn.Module):
-    def __init__(self, feature_size1, feature_size2, output_size, use_tanh_output=True, embed_size=128, hidden_size=256, orthogonal_init: bool = True):
-        super().__init__()
-        self.net = nn.Sequential(nn.Linear(2*embed_size, hidden_size),
-            nn.Tanh(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.Tanh(),
-            nn.Linear(hidden_size, output_size),)
-        self.output_layer = nn.Tanh() if use_tanh_output else None
-        self.embed1 = nn.Sequential(nn.Linear(feature_size1, embed_size),
-            nn.Tanh(),
-            nn.Linear(embed_size, embed_size),
-            )
-        self.embed2 = nn.Sequential(nn.Linear(feature_size2, embed_size),
-            nn.Tanh(),
-            nn.Linear(embed_size, embed_size),
-            )
-        self.feature1_size = feature_size1
-        self.feature2_size = feature_size2
-
-        if orthogonal_init:
-            self.orthogonal_init()
-
-    def orthogonal_init(self):
-        i = 0
-        for layer_name, layer in self.net.state_dict().items():
-            # The output layer is specially dealt
-            gain = 1 if i < len(self.net.state_dict()) - 2 else 0.01
-            if layer_name.endswith("weight"):
-                nn.init.orthogonal_(layer, gain=gain)
-            elif layer_name.endswith("bias"):
-                nn.init.constant_(layer, 0)
-
-        for layer_name, layer in self.embed1.state_dict().items():
-            # The output layer is specially dealt
-            gain = 1
-            if layer_name.endswith("weight"):
-                nn.init.orthogonal_(layer, gain=gain)
-            elif layer_name.endswith("bias"):
-                nn.init.constant_(layer, 0)
-
-        for layer_name, layer in self.embed2.state_dict().items():
-            # The output layer is specially dealt
-            gain = 1
-            if layer_name.endswith("weight"):
-                nn.init.orthogonal_(layer, gain=gain)
-            elif layer_name.endswith("bias"):
-                nn.init.constant_(layer, 0)
-
-    def forward(self, x):
-        '''
-        Args:
-            x: size of (N, feature1_size+feature2_size)
-        '''
-        feature1 = x[:,:self.feature1_size]
-        feature2 = x[:,self.feature1_size:]
-        embed1 = self.embed1(feature1)
-        embed2 = self.embed2(feature2)
-        embed = cat((embed1, embed2), dim=1)
-        out = self.net(embed)
-        if self.output_layer is not None:
-            out = self.output_layer(out)
-        return out
-
 class MultiObsEmbedding(nn.Module):
     def __init__(self, configs):
         super().__init__()
@@ -154,17 +90,6 @@ class MultiObsEmbedding(nn.Module):
         if configs['img_shape'] is not None:
             self.embed_img = ImgEncoder(configs['img_shape'], configs['k_img_conv'],\
                                     embed_size, configs['img_conv_layers'], configs['img_linear_layers'])
-            # layers = [ConvBlock(configs['img_shape'][0], configs['c_img_conv'], configs['k_img_conv'])]
-            # for _ in range(configs['n_img_conv_layers']-1):
-            #     layers.append(ConvBlock(configs['c_img_conv'], configs['c_img_conv'], configs['k_img_conv']))
-            # layers.append(nn.Flatten()) # TODO check the shape and dim
-            # linear_input_shape = int(configs['img_shape'][1]*configs['img_shape'][2]*configs['c_img_conv']/\
-            #     (4**(configs['n_img_conv_layers'])))
-            # layers.append(nn.Linear(linear_input_shape, embed_size))
-            # for _ in range(configs['n_img_linear_layers']):
-            #     layers.append(nn.Tanh())
-            #     layers.append(nn.Linear(embed_size, embed_size))
-            # self.embed_img = nn.Sequential(*layers)
             self.re_embed_img = nn.Sequential(activate_func, nn.Linear(embed_size, embed_size)) # the latten vector may not be scaled
 
         if self.input_action:
@@ -281,13 +206,13 @@ class ConvBlock(nn.Module):
         if Batch_norm:
             self.layer = nn.Sequential(
                 nn.BatchNorm2d(Cin),
-                nn.Conv2d(Cin,Cout,kernel_size=K,padding=P),  # (4,480,480)
+                nn.Conv2d(Cin,Cout,kernel_size=K,padding=P),
                 activate_func,
                 nn.MaxPool2d(Pooling),
             )
         else:
             self.layer = nn.Sequential(
-                nn.Conv2d(Cin,Cout,kernel_size=K,padding=P),  # (4,480,480)
+                nn.Conv2d(Cin,Cout,kernel_size=K,padding=P),
                 activate_func,
                 nn.MaxPool2d(Pooling),
             )
@@ -334,7 +259,6 @@ class DeConvBlock(nn.Module):
         self.res = Res
         self.cin = Cin
         self.cout = Cout
-        # self.channel_narrow = nn.MaxPool3d((int(self.cin/self.cout),1,1))
         self.short_cut = nn.Sequential(
                 nn.ConvTranspose2d(Cin,Cout,kernel_size=1),
                 nn.UpsamplingBilinear2d(upsample),
@@ -343,7 +267,6 @@ class DeConvBlock(nn.Module):
 
     def forward(self,x):
         x1 = self.layer(x)
-        # It's assumed that W==H
         _, _, W, H = x.shape
         if W != H:
             raise NotImplementedError
@@ -413,7 +336,7 @@ class ImgDecoder(nn.Module):
         x = x.reshape((B, self.c_conv_list[-1], w, w))
         x = self.conv_net(x)
         x = self.output(x)
-        return x  #.view(-1, 784)
+        return x
     
 class VAE_Conv(nn.Module):
     def __init__(self, img_shape, k, embed_size, c_conv_list, size_fc_list, use_tanh=False):

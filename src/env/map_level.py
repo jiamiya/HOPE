@@ -20,15 +20,9 @@ def _get_surrounding_obstacle(dest:State, obstacles:list):
     pts = [pt_dest_lc, pt_dest_rc, pt_dest_fc, pt_dest_bc]
     detected_obstacle = []
     for pt in pts:
-        # print(_get_nearest_obstacle(pt, obstacles, LENGTH/2, \
-        #     no_consider_obsts=detected_obstacle))
         detected_obstacle.append(_get_nearest_obstacle(pt, obstacles, LENGTH/2, \
             no_consider_obsts=detected_obstacle))
-    # obst_front = _get_nearest_obstacle(pt_dest_fc, obstacles, LENGTH/2) # TODO check correctness
-    # obst_back = _get_nearest_obstacle(pt_dest_bc, obstacles, LENGTH/2) # about the detection range
-    # obst_left = _get_nearest_obstacle(pt_dest_lc, obstacles, LENGTH/2)
-    # obst_right = _get_nearest_obstacle(pt_dest_rc, obstacles, LENGTH/2)
-    return detected_obstacle # obst_left, obst_right,obst_front, obst_back
+    return detected_obstacle
 
 def get_map_level(start:State, dest:State, obstacle_list:list):
     '''
@@ -94,7 +88,7 @@ def get_map_level(start:State, dest:State, obstacle_list:list):
             key_pt_front = dest_lf
             key_pt_back = dest_lb
         free_space_key_pts = []
-        free_space_key_pts.append(_pt_translate(key_pt_front, out_direction, 0.2)) # TODO: hyperparam
+        free_space_key_pts.append(_pt_translate(key_pt_front, out_direction, 0.2))
         free_space_key_pts.append(_pt_translate(key_pt_back, out_direction, 0.2))
         free_space_key_pts.append(_pt_translate(key_pt_front, out_direction, PARA_PARK_WALL_DIST_DICT['Normal']-0.5))
         free_space_key_pts.append(_pt_translate(key_pt_back, out_direction, PARA_PARK_WALL_DIST_DICT['Normal']-0.5))
@@ -112,7 +106,7 @@ def get_map_level(start:State, dest:State, obstacle_list:list):
         return LEVEL_NORMAL if free_space_valid else LEVEL_COMPLEX
     elif (obst_left is None or obst_right is None) and (obst_front is None or obst_back is None):
         return LEVEL_NORMAL
-    else: # otherwise the parking case is not normal TODO: check correctness
+    else: # otherwise the parking case is not normal
         if DEBUG:
             print('unconsidered case',obst_front, obst_back, obst_left, obst_right)
         return LEVEL_COMPLEX
@@ -126,7 +120,7 @@ def _pt_translate(pt:tuple, heading:float, dist:float):
 def _check_extrem_level(start:State, dest:State, obstacles:list):
     obst_left, obst_right, obst_front, obst_back = _get_surrounding_obstacle(dest, obstacles)
     # distance criterion
-    if start.loc.distance(dest.loc) > 30.0: # TODO hyperparam
+    if start.loc.distance(dest.loc) > 30.0:
         if obst_front and obst_back and \
             not _has_enough_space(dest, obstacles, length=MIN_PARK_LOT_LEN_DICT['Normal']):
             return True
@@ -166,12 +160,7 @@ def _has_enough_space(pos:State, obstacles, width=None, length=None):
     dest_box = pos.create_box()
     width_qualified = True
     if width is not None:
-        # car_rb, car_rf, car_lf, car_lb = list(pos.create_box().coords)[:-1]
-        # pt_car_lc = Point(_get_midpoint(car_lf, car_lb))
-        # pt_car_rc = Point(_get_midpoint(car_rf, car_rb))
         obst_left, obst_right, _, _ = _get_surrounding_obstacle(pos, obstacles)
-        # obst_left = _get_nearest_obstacle(pt_car_lc, obstacles, LENGTH/2)
-        # obst_right = _get_nearest_obstacle(pt_car_rc, obstacles, LENGTH/2)
         if obst_left is None or obst_right is None:
             width_qualified = True
         elif obst_left.distance(dest_box) + obst_right.distance(dest_box) + WIDTH < width:
@@ -183,12 +172,7 @@ def _has_enough_space(pos:State, obstacles, width=None, length=None):
 
     length_qualified = True
     if length is not None:
-        # car_rb, car_rf, car_lf, car_lb = list(pos.create_box().coords)[:-1]
-        # pt_car_fc = Point(_get_midpoint(car_lf, car_rf))
-        # pt_car_bc = Point(_get_midpoint(car_lb, car_rb))
         _, _, obst_front, obst_back = _get_surrounding_obstacle(pos, obstacles)
-        # obst_front = _get_nearest_obstacle(pt_car_fc, obstacles, LENGTH/2) # TODO
-        # obst_back = _get_nearest_obstacle(pt_car_bc, obstacles, LENGTH/2)
         if obst_front is None or obst_back is None:
             length_qualified = True
         elif obst_front.distance(dest_box) + obst_back.distance(dest_box) + LENGTH < length:
@@ -197,5 +181,4 @@ def _has_enough_space(pos:State, obstacles, width=None, length=None):
                 print('no enough length:', obst_front.distance(obst_back))
         else:
             length_qualified = True
-    # print(width_qualified, length_qualified, width, length, obst_front.distance(obst_back))
     return width_qualified and length_qualified

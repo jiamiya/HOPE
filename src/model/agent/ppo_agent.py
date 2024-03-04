@@ -10,7 +10,7 @@ from model.agent_base import ConfigBase, AgentBase
 from model.network import *
 from model.replay_memory import ReplayMemory
 from model.state_norm import StateNorm
-from model.action_filter import ActionMask
+from model.action_mask import ActionMask
 
 
 class PPOConfig(ConfigBase):
@@ -51,7 +51,7 @@ class PPOAgent(AgentBase):
 
         super().__init__(PPOConfig, configs, verbose, save_params, load_params)
         self.discrete = discrete
-        self.action_filter = ActionMask()#ActionFilter2()
+        self.action_filter = ActionMask()
 
         # debug
         self.actor_loss_list = []
@@ -183,7 +183,7 @@ class PPOAgent(AgentBase):
                 
         return action, log_prob
 
-    def get_log_prob(self, obs: np.ndarray, action: np.ndarray): # only for ppo
+    def get_log_prob(self, obs: np.ndarray, action: np.ndarray):
         '''get the log probability for given action based on current policy
 
         Args:

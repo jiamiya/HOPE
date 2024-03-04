@@ -1,5 +1,3 @@
-'The map_base for random parking env generator'
-
 
 import sys
 sys.path.append("../")
@@ -88,8 +86,6 @@ def generate_bay_parking_case(map_level):
     # generate obstacle on left
     # the obstacle can be another vehicle or just a simple obstacle
     if random()<prob_huge_obst: # generate simple obstacle
-        # max_dist_to_obst = 1.0
-        # min_dist_to_obst = 0.4 + MIN_DIST_TO_OBST
         max_dist_to_obst = max_lateral_space/5*4
         min_dist_to_obst = max_lateral_space/5*1
         left_obst_rf = get_rand_pos(*car_lf, pi*11/12, pi*13/12, min_dist_to_obst, max_dist_to_obst)
@@ -100,8 +96,6 @@ def generate_bay_parking_case(map_level):
             (origin[0]-bay_half_len, origin[1]), 
             (origin[0]-bay_half_len, left_obst_rf[1])))
     else: # generate another vehicle as obstacle on left
-        # max_dist_to_obst = 1.0
-        # min_dist_to_obst = 0.4 + MIN_DIST_TO_OBST
         max_dist_to_obst = max_lateral_space/5*4
         min_dist_to_obst = max_lateral_space/5*1
         left_car_x = origin[0] - (WIDTH + random_uniform_num(min_dist_to_obst, max_dist_to_obst))
@@ -123,8 +117,6 @@ def generate_bay_parking_case(map_level):
 
     # generate obstacle on right
     dist_dest_to_left_obst = dest_box.distance(obstacle_left)
-    # min_dist_to_obst = max(MIN_BAY_PARK_LOT_WIDTH-WIDTH-dist_dest_to_left_obst, 0)+MIN_DIST_TO_OBST
-    # max_dist_to_obst = 1.0
     min_dist_to_obst = max(min_lateral_space-dist_dest_to_left_obst, 0)+MIN_DIST_TO_OBST
     max_dist_to_obst = max(max_lateral_space-dist_dest_to_left_obst, 0)+MIN_DIST_TO_OBST
     if random()<prob_huge_obst: # generate simple obstacle
@@ -152,13 +144,11 @@ def generate_bay_parking_case(map_level):
             if random()<prob_non_critical_car:
                 non_critical_vehicle.append(obstacle_right_)
 
-    # print(dist_dest_to_left_obst, dest_box.distance(obstacle_right), dest_box.distance(obstacle_right)+dist_dest_to_left_obst)
     dist_dest_to_right_obst = dest_box.distance(obstacle_right)
     if dist_dest_to_right_obst+dist_dest_to_left_obst<min_lateral_space or \
         dist_dest_to_right_obst+dist_dest_to_left_obst>max_lateral_space or \
         dist_dest_to_left_obst<MIN_DIST_TO_OBST or \
         dist_dest_to_right_obst<MIN_DIST_TO_OBST:
-        # print(dist_dest_to_left_obst, dest_box.distance(obstacle_right), dest_box.distance(obstacle_right)+dist_dest_to_left_obst)
         generate_success = False
     # check collision
     obstacles = [obstacle_back, obstacle_left, obstacle_right]
@@ -245,11 +235,6 @@ def generate_bay_parking_case(map_level):
             num_files = len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])
             fig = plt.gcf()
             fig.savefig(path+f'image_{num_files}.png')
-            # img = plt.gcf()
-            # current_time = time.localtime()
-            # timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-            # img.savefig('./log/figure/%s.png'%timestamp)
-        # plt.show()
         plt.clf()
     
     if generate_success:
@@ -379,8 +364,6 @@ def generate_parallel_parking_case(map_level):
     obstacles.extend(non_critical_vehicle)
     for obst in obstacles:
         if obst.intersects(dest_box):
-            # print(dist_dest_to_left_obst, min_dist_to_obst)
-            # print('dest box intersect with obstacles!!!')
             generate_success = False
 
     # generate obstacles out of start range
@@ -464,13 +447,7 @@ def generate_parallel_parking_case(map_level):
     if DEBUG:
         ax.add_patch(plt.Polygon(xy=list(State([start_x, start_y, start_yaw, 0, 0]).create_box().coords), color='g'))
         print(generate_success)
-        # if generate_success:
-        #     path = './log/figure/'
-        #     num_files = len([f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))])
-            # fig = plt.gcf()
-            # fig.savefig(path+f'image_{num_files}.png')
         plt.show()
-        # plt.clf()
     
     if generate_success:
         return [start_x, start_y, start_yaw], [dest_x, dest_y, dest_yaw], obstacles
@@ -514,8 +491,6 @@ class ParkingMapNormal(object):
         self.obstacles = list([Area(shape=obs, subtype="obstacle", \
             color=(150, 150, 150, 255)) for obs in obstacles])
         self.n_obstacle = len(self.obstacles)
-        # if self.map_level=='Complex' and self.case_id == 0 and random() > 0.5:
-        #     self.flip_dest_orientation()
 
         return self.start
     
@@ -541,8 +516,6 @@ class ParkingMapNormal(object):
 
 if __name__ == '__main__':
     import time
-    # for _ in range(5):
-    #     generate_bay_parking_case()
     t = time.time()
     for _ in range(10):
         generate_bay_parking_case()

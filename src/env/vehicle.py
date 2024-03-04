@@ -193,7 +193,7 @@ class Vehicle:
         self.trajectory: List[State] = []
         self.kinetic_model: Callable = \
             KSModel(wheel_base, step_len, n_step, speed_range, angle_range)
-        self.color = COLOR_POOL[0]#random.sample(COLOR_POOL, 1)[0]
+        self.color = COLOR_POOL[0]
         self.v_max = None
         self.v_min = None
 
@@ -211,7 +211,6 @@ class Vehicle:
         self.trajectory.clear()
         self.trajectory.append(self.state)
         self.tmp_trajectory = self.trajectory.copy()
-        # self.color = random.sample(COLOR_POOL, 1)[0]
 
     def step(self, action: np.ndarray, step_time: int=NUM_STEP):
         """

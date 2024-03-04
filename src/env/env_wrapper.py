@@ -49,11 +49,9 @@ def action_rescale(action:np.ndarray, action_space, raw_action_range=(-1,1), exp
         action = action_space.sample()
     return action
 
-def observation_rescale(obs): #TODO consider the case both img and lidar are used
+def observation_rescale(obs):
     if obs['img'] is not None:
         obs['img'] = obs['img'].transpose((2,0,1))
-    # elif obs['lidar'] is not None:
-    #     obs = np.concatenate((obs['lidar'], obs['target']))
     return obs
 
 
@@ -68,7 +66,6 @@ class CarParkingWrapper(Wrapper):
         self.action_func = action_func
         self.obs_func = observation_func
         self.observation_shape = {k:self.env.observation_space[k].shape for k in self.env.observation_space}
-        # TODO the img shape is inconsistent
         if 'img' in self.observation_shape:
             w,h,c = self.observation_shape['img']
             self.observation_shape['img'] = (c,w,h)

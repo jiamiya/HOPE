@@ -14,8 +14,7 @@ from configs import *
 
 class ParkingMapDLP(object):
     default = {
-        # "path": '../data/dealt_map.data',
-        'path': '../data/multi_starts_map5.data' # 5
+        'path': '../data/dlp.data' # 5
     }
     def __init__(self):
 
@@ -63,7 +62,6 @@ class ParkingMapDLP(object):
         if self.multi_start:
             random_id = np.random.randint(0, len(start))
             start = start[random_id]
-            # print('multi_start!', random_id, start)
         self.start = State(start)
         self.start_box = self.start.create_box()
         self.dest = State(dest)
@@ -77,7 +75,6 @@ class ParkingMapDLP(object):
         self.obstacles = list([Area(shape=obs, subtype="obstacle", \
             color=(150, 150, 150, 255)) for obs in obstacles])
         self.n_obstacle = len(self.obstacles)
-        # self.get_boundary()
         self.filter_obstacles()
         if random() > 0.5:
             self.flip_dest_orientation()
@@ -98,7 +95,6 @@ class ParkingMapDLP(object):
             if not (x_max <= self.xmin or x_min >= self.xmax or\
             y_max <= self.ymin or y_min >= self.ymax):
                 filtered_obstacles.append(obs_area)
-        # print('filter:', len(filtered_obstacles), self.n_obstacle)
         self.obstacles = filtered_obstacles
         self.n_obstacle = len(self.obstacles)
         return

@@ -10,7 +10,7 @@ from model.agent_base import ConfigBase, AgentBase
 from model.network import *
 from model.replay_memory import ReplayMemory
 from model.state_norm import StateNorm
-from model.action_filter import ActionMask
+from model.action_mask import ActionMask
 
 class SACCriticAdapter(nn.Module):
     def __init__(self, configs: dict, action_dim:int=2):
@@ -21,14 +21,13 @@ class SACCriticAdapter(nn.Module):
         self.net = MultiObsEmbedding(self.configs)
 
     def forward(self, state: dict, action: torch.Tensor) -> torch.Tensor:
-        state_action = state # deepcopy(state) # TODO: check if deepcopy is necessary
+        state_action = state
         state_action['action'] = action
         x = self.net(state_action)
         return x
     
     def load_img_encoder(self, path: str = None, device: str = None, require_grad: bool = False) -> None:
         self.net.load_img_encoder(path, device, require_grad)
-        # print('Load pretrained image encoder from path: %s'%path)
 
 
 class SACConfig(ConfigBase):
@@ -68,7 +67,7 @@ class SACAgent(AgentBase):
 
         super().__init__(SACConfig, configs, verbose, save_params, load_params)
         self.discrete = discrete
-        self.action_filter = ActionMask()#ActionFilter2()
+        self.action_filter = ActionMask()
 
         # debug
         self.actor_loss_list = []
@@ -104,7 +103,6 @@ class SACAgent(AgentBase):
                 [{'params':self.actor_net.parameters()}, {'params': self.log_std}], 
                 self.configs.lr_actor, 
             )
-        # self.actor_target_net = deepcopy(self.actor_net)
 
         ## critic net
         self.critic_net1 = SACCriticAdapter(self.configs.critic_layers).to(self.device)
@@ -137,7 +135,7 @@ class SACAgent(AgentBase):
             ("log_std", self.log_std, 0)
         ]
 
-    def _actor_forward(self, obs) -> torch.distributions.Distribution: # to be replaced
+    def _actor_forward(self, obs) -> torch.distributions.Distribution:
         observation = deepcopy(obs)
         if self.configs.state_norm:
             observation = self.state_normalize.state_norm(observation)
@@ -150,12 +148,11 @@ class SACAgent(AgentBase):
             mean =  torch.clamp(policy_dist,-1,1)  
             log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
             std = torch.exp(log_std)
-            # std = torch.Tensor([0.1]).expand_as(mean).to(self.device)
             dist = Normal(mean, std)
             
         return dist
     
-    def _post_process_action(self, action_dist:torch.distributions.Distribution , action_mask=None): # to be replaced
+    def _post_process_action(self, action_dist:torch.distributions.Distribution , action_mask=None):
         if action_mask is not None:
             mean, std = action_dist.mean, action_dist.stddev
             action = self.action_filter.choose_action(mean, std, action_mask)
@@ -194,7 +191,7 @@ class SACAgent(AgentBase):
                 
         return action, log_prob
 
-    def get_log_prob(self, obs: np.ndarray, action: np.ndarray): # only for ppo
+    def get_log_prob(self, obs: np.ndarray, action: np.ndarray):
         '''get the log probability for given action based on current policy
 
         Args:
@@ -254,23 +251,17 @@ class SACAgent(AgentBase):
     
     def _get_action_and_log_prob(self, obs):
         action_policy = self.actor_net(obs)
-        # print(action_policy.requires_grad,1)
         mean =  torch.clamp(action_policy,-1,1)
-        # print(mean.requires_grad,'mean')
-        log_std = self.log_std.expand_as(mean)  # To make 'log_std' have the same dimension as 'mean'
+        log_std = self.log_std.expand_as(mean)
         std = torch.exp(log_std)
-        # std = torch.Tensor([0.1]).expand_as(mean).to(self.device)
         action_dist = Normal(mean, std)
-        # action_batch = action_dist.sample()
         action_batch = action_dist.rsample()
         
-        # print(action_batch.requires_grad,2)
         action_batch = torch.clamp(action_batch, -1, 1)
         log_prob = action_dist.log_prob(action_batch)
         return action_batch, log_prob
 
     def update(self):
-        # print('update')
         for _ in range(self.configs.mini_epoch):
             batches = self.memory.sample(self.configs.batch_size)
             state_batch = self.obs2tensor(batches["state"])
@@ -280,9 +271,7 @@ class SACAgent(AgentBase):
                 if self.configs.reward_norm else rewards
             reward_batch = reward_batch.to(self.device)
             done_batch = torch.FloatTensor(batches["done"]).to(self.device).unsqueeze(1)
-            # old_log_prob_batch = torch.FloatTensor(batches["log_prob"]).to(self.device)
             next_state_batch = self.obs2tensor(batches["next_obs"])
-            
             
             # soft Q loss
             with torch.no_grad():
@@ -315,13 +304,10 @@ class SACAgent(AgentBase):
 
             # policy loss
             action_, log_prob = self._get_action_and_log_prob(state_batch)
-            # print(action_.requires_grad, log_prob.requires_grad)
             log_prob = log_prob.sum(-1, keepdim=True)
             q1_value = self.critic_net1(state_batch, action_)
             q2_value = self.critic_net2(state_batch, action_)
             actor_loss = (self.alpha.detach() * log_prob - torch.min(q1_value, q2_value)).mean()
-            # criterion = nn.MSELoss()
-            # actor_loss = criterion(torch.ones_like(action_), action_)
 
             # update the actor network
             self.actor_optimizer.zero_grad()
@@ -351,7 +337,7 @@ class SACAgent(AgentBase):
         b = q1_loss.item()
         return a, b
 
-    def save(self, path: str = None, params_only: bool = None) -> None: # to be replaced
+    def save(self, path: str = None, params_only: bool = None) -> None:
         """Store the model structure and corresponding parameters to a file.
         """
         if params_only is not None:
@@ -372,7 +358,7 @@ class SACAgent(AgentBase):
         if self.verbose:
             print("Save current model to %s" % path)
 
-    def load(self, path: str = None, params_only: bool = None) -> None: # to be replaced
+    def load(self, path: str = None, params_only: bool = None) -> None:
         """Load the model structure and corresponding parameters from a file.
         """
         if params_only is not None:
@@ -400,26 +386,8 @@ class SACAgent(AgentBase):
         if self.verbose:
             print("Load the model from %s" % path)
 
-    # def load_actor(self, path: str = None) -> None: # to be replaced
-    #     """Load the model structure and corresponding parameters from a file.
-    #     """
-    #     if len(self.check_list) > 0:
-    #         checkpoint = torch.load(path, map_location=self.device)
-    #         for name, item, save_state_dict in self.check_list:
-    #             if name != 'actor_net':
-    #                 continue
-    #             if save_state_dict:
-    #                 item.load_state_dict(checkpoint[name])
-    #             else:
-    #                 item = checkpoint[name]
-
-    #         self.log_std.data.copy_(checkpoint['log']) 
-    #         self.actor_target_net = deepcopy(self.actor_net).to(self.device)
-    #         self.state_normalize = checkpoint['state_norm']
-
     def load_img_encoder(self, path: str = None, require_grad: bool = False) -> None:
         self.actor_net.load_img_encoder(path, self.device, require_grad)
-        # self.actor_target_net = deepcopy(self.actor_net).to(self.device)
         self.critic_net1.load_img_encoder(path, self.device, require_grad)
         self.critic_target_net1 = deepcopy(self.critic_net1).to(self.device)
         self.critic_net2.load_img_encoder(path, self.device, require_grad)

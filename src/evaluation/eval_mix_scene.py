@@ -24,7 +24,7 @@ if __name__=="__main__":
 
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--agent_ckpt', type=str, default=None) # './model/ckpt/SAC.pt'
+    parser.add_argument('ckpt_path', type=str, default=None) # './model/ckpt/SAC.pt'
     parser.add_argument('--eval_episode', type=int, default=2000)
     parser.add_argument('--verbose', type=bool, default=True)
     parser.add_argument('--visualize', type=bool, default=True)
@@ -83,7 +83,7 @@ if __name__=="__main__":
     rs_planner = RsPlanner(step_ratio)
     parking_agent = ParkingAgent(rl_agent, rs_planner)
 
-    eval_episode = argparse.eval_episode
+    eval_episode = args.eval_episode
     choose_action = True if isinstance(rl_agent, PPO) else False
     with torch.no_grad():
         # eval on extreme
