@@ -1,19 +1,32 @@
 import numpy as np
 import torch
+from shapely import LineString, Point
 from scipy.ndimage.filters import minimum_filter1d
 
 from configs import *
 
 class ActionMask():
-    def __init__(self, VehicleBox=VehicleBox, lidar_base=vehicle_boundary, n_iter=10) -> None:
+    def __init__(self, VehicleBox=VehicleBox, n_iter=10) -> None:
+        print('initializing action mask')
         self.vehicle_box_base = VehicleBox
         self.n_iter = n_iter
         self.action_space = discrete_actions
         self.vehicle_boxes = self.init_vehicle_box() #(42, n_iter, 4, 2)
-        self.vehicle_lidar_base = lidar_base
         self.lidar_num = LIDAR_NUM
+        self.lidar_range = LIDAR_RANGE
+        self.vehicle_lidar_base = self.get_vehicle_lidar_base()
         self.up_sample_rate = 10
         self.dist_star = self.precompute()
+
+    def get_vehicle_lidar_base(self, ):
+        lidar_base = []
+        ORIGIN = Point((0,0))
+        for l in range(self.lidar_num):
+            lidar_line = LineString(((0,0), (np.cos(l*np.pi/self.lidar_num*2)*self.lidar_range,\
+                 np.sin(l*np.pi/self.lidar_num*2)*self.lidar_range)))
+            distance = lidar_line.intersection(VehicleBox).distance(ORIGIN)
+            lidar_base.append(distance)
+        return np.array(lidar_base)
 
     def _intersect(self, e1:np.ndarray, e2:np.ndarray):
         """
@@ -63,7 +76,7 @@ class ActionMask():
         raw_x[parallel_line_pos] = tmp_inf
 
         intersections = np.stack([raw_x, raw_y], axis=2) # (m, n, 2)
-        print(e1.shape, e2.shape, intersections.shape)
+        # print(e1.shape, e2.shape, intersections.shape)
         assert intersections.shape ==  (e1.shape[0], e2.shape[0], 2)
 
         return intersections

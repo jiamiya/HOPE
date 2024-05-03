@@ -136,7 +136,7 @@ if __name__=="__main__":
     print("You can track the training process by command 'tensorboard --log-dir %s'" % save_path)
 
     seed = SEED
-    env.seed(seed)
+    # env.seed(seed)
     env.action_space.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -209,8 +209,8 @@ if __name__=="__main__":
             parking_agent.push_memory((obs, action, reward, done, log_prob, next_obs))
             obs = next_obs
             if total_step_num > parking_agent.configs.memory_size and total_step_num%10==0: # TODO %100 decay
-                if verbose:
-                    print("Updating the agent.")
+                # if verbose:
+                #     print("Updating the agent.")
                 actor_loss, critic_loss = parking_agent.update()
                 if total_step_num%200==0:
                     writer.add_scalar("actor_loss", actor_loss, i)
@@ -273,7 +273,7 @@ if __name__=="__main__":
             f_best_log.close()
 
         if (i+1) % 2000 == 0:
-            parking_agent.save("%s/PPO2_%s.pt" % (save_path, i),params_only=True)
+            parking_agent.save("%s/SAC_%s.pt" % (save_path, i),params_only=True)
         
 
         if verbose and i%20==0:
@@ -288,33 +288,34 @@ if __name__=="__main__":
             f.clear()
 
     eval_episode = args.eval_episode
+    choose_action = False
     with torch.no_grad():
         # eval on dlp
         env.set_level('dlp')
         log_path = save_path+'/dlp'
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path, post_proc_action=choose_action)
         
         # eval on extreme
         env.set_level('Extrem')
         log_path = save_path+'/extreme'
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path, post_proc_action=choose_action)
         
         # eval on complex
         env.set_level('Complex')
         log_path = save_path+'/complex'
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path, post_proc_action=choose_action)
         
         # eval on normalize
         env.set_level('Normal')
         log_path = save_path+'/normalize'
         if not os.path.exists(log_path):
             os.makedirs(log_path)
-        eval(env, parking_agent, episode=eval_episode, log_path=log_path)
+        eval(env, parking_agent, episode=eval_episode, log_path=log_path, post_proc_action=choose_action)
 
     env.close()

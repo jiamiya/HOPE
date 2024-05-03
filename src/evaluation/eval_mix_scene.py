@@ -43,7 +43,7 @@ if __name__=="__main__":
     relative_path = '.'
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    save_path = relative_path+'/log/eval/ppo_mixed/%s/' % timestamp
+    save_path = relative_path+'/log/eval/%s/' % timestamp
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     configs_file = os.path.join(save_path, 'configs.txt')
@@ -54,7 +54,7 @@ if __name__=="__main__":
     print("You can track the training process by command 'tensorboard --log-dir %s'" % save_path)
 
     seed = SEED
-    env.seed(seed)
+    # env.seed(seed)
     env.action_space.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
