@@ -1,0 +1,12 @@
+numpy
+shapely
+pygame
+gym
+heapdict
+opencv-python
+scipy
+tensorboard
+tqdm
+matplotlib
+einops
+pytorch
