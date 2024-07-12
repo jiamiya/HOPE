@@ -43,7 +43,6 @@ class SceneChoose():
                 scene_chosen = self._choose_case_worst_perform()
             else:
                 scene_chosen = self._choose_case_uniform()
-        # scene_chosen = 0
         self.scene_record.append(scene_chosen)
         return self.scene_types[scene_chosen]
     
@@ -59,7 +58,6 @@ class SceneChoose():
     
     def _choose_case_worst_perform(self,):
         success_rate = []
-        # recent_success_record = self.success_record[-1000:]
         for i in self.success_record.keys():
             idx = int(i)
             recent_success_record = self.success_record[idx][-min(250, len(self.success_record[idx])):]
@@ -71,7 +69,7 @@ class SceneChoose():
 
 class DlpCaseChoose():
     def __init__(self) -> None:
-        self.dlp_case_num = 253
+        self.dlp_case_num = 248
         self.case_record = []
         self.case_success_rate = {}
         for i in range(self.dlp_case_num):
@@ -82,7 +80,6 @@ class DlpCaseChoose():
         if np.random.random()<0.2 or len(self.case_record)<self.horizon:
             return np.random.randint(0, self.dlp_case_num)
         success_rate = []
-        # recent_success_record = self.success_record[-1000:]
         for i in range(self.dlp_case_num):
             idx = str(i)
             if len(self.case_success_rate[idx]) <= 1:
@@ -91,7 +88,6 @@ class DlpCaseChoose():
                 recent_success_record = self.case_success_rate[idx][-min(10, len(self.case_success_rate[idx])):]
                 success_rate.append(np.sum(recent_success_record)/len(recent_success_record))
         fail_rate = 1-np.array(success_rate)
-        # print(fail_rate)
         fail_rate = np.clip(fail_rate, 0.005, 1)
         fail_rate = fail_rate/np.sum(fail_rate)
         return np.random.choice(np.arange(len(fail_rate)), p=fail_rate)
@@ -193,7 +189,6 @@ if __name__=="__main__":
         xy = []
         while not done:
             step_num += 1
-            # action, log_prob = parking_agent.get_action(obs)
             action, log_prob = parking_agent.choose_action(obs)
             next_obs, reward, done, info = env.step(action)
             reward_info.append(list(info['reward_info'].values()))

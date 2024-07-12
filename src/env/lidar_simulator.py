@@ -27,7 +27,6 @@ class LidarSimlator():
             self.lidar_lines.append(LineString(((0,0), (math.cos(a*math.pi/lidar_num*2)*lidar_range,\
                  math.sin(a*math.pi/lidar_num*2)*lidar_range))))
         self.vehicle_boundary = self.get_vehicle_boundary()
-        # np.save('../data/vehicle_boundary.npy', self.vehicle_boundary)
 
     def get_observation(self, ego_state:State, obstacles:list):
         '''

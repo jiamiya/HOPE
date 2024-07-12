@@ -14,7 +14,7 @@ from configs import *
 
 class ParkingMapDLP(object):
     default = {
-        'path': '../data/dlp.data' # 5
+        'path': '../data/dlp.data'
     }
     def __init__(self):
 
@@ -29,7 +29,7 @@ class ParkingMapDLP(object):
         self.obstacles:List[Area] = []
 
         f_map = open(self.default['path'], 'rb')
-        self.map_data = pickle.load(f_map)
+        self.map_data = pickle.load(f_map) # n* (start_candidates, dest, obstacles, traj_path)
         f_map.close()
         self.multi_start = False
         if isinstance(self.map_data[0][0], list):
@@ -52,8 +52,8 @@ class ParkingMapDLP(object):
                 case_id = case_id%len(self.map_data)
             self.case_id = case_id
         start, dest, obstacles = self.map_data[self.case_id][:3]
-        if len(self.map_data[self.case_id]) == 4:
-            self.traj_path = self.map_data[self.case_id][3]
+        # if len(self.map_data[self.case_id]) == 4:
+        #     self.traj_path = self.map_data[self.case_id][3]
         if isinstance(start, tuple):
             start = list(start)
         if isinstance(dest, tuple):
@@ -62,6 +62,7 @@ class ParkingMapDLP(object):
         if self.multi_start:
             random_id = np.random.randint(0, len(start))
             start = start[random_id]
+            start = (start[0] + randn()*0.05, start[1] + randn()*0.05, start[2] + randn()*0.02)
         self.start = State(start)
         self.start_box = self.start.create_box()
         self.dest = State(dest)
@@ -112,8 +113,8 @@ class ParkingMapDLP(object):
     def change_start_dest(self,):
         self.start, self.dest = self.dest, self.start
         self.start_box, self.dest_box = self.dest_box, self.start_box
-        if len(self.map_data[self.case_id]) == 4:
-            self.traj_path = [self.traj_path[-(i+1)] for i in range(len(self.traj_path))]
+        # if len(self.map_data[self.case_id]) == 4:
+        #     self.traj_path = [self.traj_path[-(i+1)] for i in range(len(self.traj_path))]
 
     def _flip_box_orientation(self, target_state:State):
         x, y, heading = target_state.get_pos()

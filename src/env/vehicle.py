@@ -91,39 +91,6 @@ class KSModel(object):
         return gt_x/x, gt_y/y
 
 
-    def step2(self, state: State, action: list) -> State:
-        """Update the state of a vehicle with the Kinematic Single-Track Model.
-
-        Args:
-            state (list): [x, y, car_angle, speed, steering]
-            action (list): [steer, accel].
-            step (float, optional): the step length for each simulation.
-            n_step (int): number of step of updating the physical state. This value is decide by
-                (physics simulation step length : rendering step length).
-
-        """
-        new_state = copy.deepcopy(state)
-        x, y = new_state.loc.x, new_state.loc.y
-        steer, accel = action
-        new_state.steering = steer
-        new_state.steering = np.clip(new_state.steering, *self.angle_range)
-
-        # TODO: check correctness
-        for _ in range(self.n_step):
-            x += new_state.speed * np.cos(new_state.heading) * self.step_len
-            y += new_state.speed * np.sin(new_state.heading) * self.step_len
-            new_state.heading += \
-                 (new_state.speed * np.tan(new_state.steering) / self.wheel_base) * self.step_len 
-            new_state.speed += accel * self.step_len
-            # new_state.steering += angular_speed * self.step_len
-            new_state.speed = np.clip(new_state.speed, *self.speed_range)
-            # if new_state.speed<0:
-            #     print(self.speed_range, new_state.speed)
-
-        
-        new_state.loc = Point(x, y)
-        return new_state
-
     def step(self, state: State, action: list, step_time:int=NUM_STEP) -> State:
         """Update the state of a vehicle with the Kinematic Single-Track Model.
 
@@ -135,8 +102,6 @@ class KSModel(object):
                 (physics simulation step length : rendering step length).
 
         """
-        # accel = np.clip(accel, *self.accel_range)
-        # angular_speed = np.clip(angular_speed, *self.angular_speed_range)
         new_state = copy.deepcopy(state)
         x, y = new_state.loc.x, new_state.loc.y
         steer, speed = action
@@ -153,23 +118,18 @@ class KSModel(object):
                 y += new_state.speed * np.sin(new_state.heading) * self.step_len/self.mini_iter
                 new_state.heading += \
                     new_state.speed * np.tan(new_state.steering) / self.wheel_base * self.step_len/self.mini_iter 
-            # new_state.speed += accel * self.step_len
-            # new_state.steering += angular_speed * self.step_len
-            # new_state.speed = np.clip(new_state.speed, *self.speed_range)
-            # if new_state.speed<0:
-            #     print(self.speed_range, new_state.speed)
 
-            # correct the simulation error
-            kx, ky = self.correction
-            x0, y0, theta = state.loc.x, state.loc.y, state.heading
-            phi = np.arctan2(y-y0, x-x0)
-            alpha = phi - theta
-            r = np.sqrt((y-y0)**2 + (x-x0)**2)
-            xt_, yt_ = r*np.cos(alpha)*kx, r*np.sin(alpha)*ky
-            rt = np.sqrt(xt_**2 + yt_**2)
-            beta = np.arctan2(yt_, xt_)
-            x = rt*np.cos(theta+beta) + x0
-            y = rt*np.sin(theta+beta) + y0
+            # # correct the simulation error
+            # kx, ky = self.correction
+            # x0, y0, theta = state.loc.x, state.loc.y, state.heading
+            # phi = np.arctan2(y-y0, x-x0)
+            # alpha = phi - theta
+            # r = np.sqrt((y-y0)**2 + (x-x0)**2)
+            # xt_, yt_ = r*np.cos(alpha)*kx, r*np.sin(alpha)*ky
+            # rt = np.sqrt(xt_**2 + yt_**2)
+            # beta = np.arctan2(yt_, xt_)
+            # x = rt*np.cos(theta+beta) + x0
+            # y = rt*np.sin(theta+beta) + y0
         
         new_state.loc = Point(x, y)
         return new_state
@@ -215,7 +175,7 @@ class Vehicle:
     def step(self, action: np.ndarray, step_time: int=NUM_STEP):
         """
         Args:
-            action (list): [steer, acceleration]
+            action (list): [steer, speed]
         """
         prev_info = copy.deepcopy((self.state, self.box, self.v_max, self.v_min))
         self.state = self.kinetic_model.step(self.state, action, step_time)
@@ -224,18 +184,6 @@ class Vehicle:
         self.tmp_trajectory.append(self.state)
         self.v_max = self.state.speed if self.state.speed > self.v_max else self.v_max
         self.v_min = self.state.speed if self.state.speed < self.v_min else self.v_min
-        return prev_info
-    
-    def meta_step(self, action: np.ndarray):
-        prev_info = copy.deepcopy((self.state, self.box, self.v_max, self.v_min))
-        prev_x, prev_y, prev_heading = self.state.get_pos()
-        step_len, step_angle, related_heading = action
-        curr_x = prev_x + step_len*np.cos(step_angle + prev_heading)
-        curr_y = prev_y + step_len*np.sin(step_angle + prev_heading)
-        curr_heading = prev_heading + related_heading
-        self.state = State([curr_x, curr_y, curr_heading])
-        self.box = self.state.create_box()
-        self.trajectory.append(self.state)
         return prev_info
 
     def retreat(self, prev_info):

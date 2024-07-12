@@ -36,16 +36,16 @@ def eval(env, agent, episode=2000, log_path='', multi_level=False, post_proc_act
         step_num = 0
         path_length = 0
         last_xy = (env.vehicle.state.loc.x, env.vehicle.state.loc.y)
-        # last_obs = obs['target']
+        last_obs = obs['target']
         while not done:
             step_num += 1
             if post_proc_action:
                 action, _ = agent.choose_action(obs)
             else:
                 action, _ = agent.get_action(obs)
-            # if (last_obs == obs['target']).all():
-            #     action = env.action_space.sample()
-            # last_obs = obs['target']
+            if (last_obs == obs['target']).all():
+                action = env.action_space.sample()
+            last_obs = obs['target']
             next_obs, reward, done, info = env.step(action)
             total_reward += reward
             obs = next_obs

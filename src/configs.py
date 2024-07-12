@@ -1,7 +1,7 @@
 
 import os
-os.environ["SDL_VIDEODRIVER"]="dummy"
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+# os.environ["SDL_VIDEODRIVER"]="dummy"
+# os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 
 import numpy as np
 import torch
@@ -10,18 +10,11 @@ SEED = 42
 
 #########################
 # vehicle
-# WHEEL_BASE = 2.8  # wheelbase
-# FRONT_HANG = 0.96  # front hang length
-# REAR_HANG = 0.93  # rear hang length
-# LENGTH = WHEEL_BASE+FRONT_HANG+REAR_HANG
-# WIDTH = 1.94  # width
-
-WHEEL_BASE = 2.65  # wheelbase
-FRONT_HANG = 0.905  # front hang length
-REAR_HANG = 0.96  # rear hang length
-LENGTH = 4.515
-WIDTH = 1.86  # width
-
+WHEEL_BASE = 2.8  # wheelbase
+FRONT_HANG = 0.96  # front hang length
+REAR_HANG = 0.93  # rear hang length
+LENGTH = WHEEL_BASE+FRONT_HANG+REAR_HANG
+WIDTH = 1.94  # width
 
 from shapely.geometry import LinearRing
 VehicleBox = LinearRing([
@@ -37,8 +30,7 @@ COLOR_POOL = [
 ]
 
 VALID_SPEED = [-2.5, 2.5]
-# VALID_STEER = [-0.75, 0.75]
-VALID_STEER = [-0.449, 0.449]
+VALID_STEER = [-0.75, 0.75]
 VALID_ACCEL = [-1.0, 1.0]
 VALID_ANGULAR_SPEED = [-0.5, 0.5]
 
@@ -68,7 +60,6 @@ PARA_PARK_WALL_DIST_DICT = {
     'Normal':4.5,
 }
 BAY_PARK_WALL_DIST_DICT = {
-    # 'Extrem':5.0,
     'Complex':6.0,
     'Normal':7.0,
 }
@@ -113,7 +104,7 @@ K = 12 # the render scale
 RS_MAX_DIST = 10
 RENDER_TRAJ = True
 
-
+# action mask
 PRECISION = 10
 step_speed = 1
 discrete_actions = []
@@ -195,7 +186,6 @@ REWARD_WEIGHT = OrderedDict({'time_cost':1,\
             'angle_reward':0,\
             'box_union_reward':10,})
 
-# vehicle_boundary = np.load('../data/vehicle_boundary.npy')
 
 CONFIGS_ACTION = {
     'use_tanh_activate': True,

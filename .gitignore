@@ -1,14 +1,9 @@
 # custom
-raw_obs_data/
-ray_results/
-log_batch18/
 log/
 log
 
 # data
 parking
-*.data
-*.pt
 *.jpg
 *.png
 *.csv

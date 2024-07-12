@@ -35,9 +35,9 @@ class SACConfig(ConfigBase):
         super().__init__()
 
         # hyperparameters
-        self.lr_actor = self.lr*1
-        self.lr_critic = self.lr*1
-        self.lr_alpha = self.lr*1
+        self.lr_actor = self.lr
+        self.lr_critic = self.lr
+        self.lr_alpha = self.lr
         self.tau = 0.005
         self.adam_epsilon = 1e-8
         self.dist_type = "gaussian"
@@ -90,7 +90,6 @@ class SACAgent(AgentBase):
         Initialize 1.the network, 2.the optimizer, 3.the checklist.
         '''
 
-        
         ## actor net
         self.actor_net = MultiObsEmbedding(self.configs.actor_layers).to(self.device)
         self.log_std = \

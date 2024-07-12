@@ -1,7 +1,4 @@
 
-import os
-# os.environ["SDL_VIDEODRIVER"]="dummy"
-# os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 
 import torch
 from torch import nn
@@ -46,7 +43,7 @@ class Attention(nn.Module):
         attn = self.dropout(attn)
         out = torch.matmul(attn, v) # v: [b, h, n, d]   attn: [b, h, n, n]
         out = rearrange(out, 'b h n d -> b n (h d)')
-        return self.to_out(out) #  [b, n, h*d] -> [b, n, f]
+        return self.to_out(out) # [b, n, h*d] -> [b, n, f]
     
 class FeedForward(nn.Module):
     def __init__(self, dim, hidden_dim, dropout = 0.):
@@ -93,47 +90,6 @@ class AttentionNetwork(nn.Module):
         x = self.encoder(x)
         x = rearrange(x, 'b n d -> b (n d)')
         return self.output(x)
-    
-if __name__ == "__main__":
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    feature_dim = 8
-    n_feature = 2
-    output_dim = 1
 
-    # model = Transformer(
-    #     dim = feature_dim,
-    #     depth = 6,
-    #     heads = 16,
-    #     dim_head = 64,
-    #     mlp_dim = 256,)
-    model = AttentionNetwork(
-        dim = feature_dim,
-        depth = 6,
-        heads = 16,
-        dim_head = 64,
-        mlp_dim = 256,
-        n_features=n_feature,
-        hidden_dim=128,
-        output_dim=output_dim,
-        ).to(device)
-    criterion = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    
-    for e in range(100):
-        total_loss = 0
-        for _ in trange(100):
-            data_input = torch.randn(1, n_feature, feature_dim).to(device)
-            # data_label = torch.ones((output_dim)) if \
-            #     torch.sum(data_input[:,:,:feature_dim//2]) > torch.sum(data_input)/2 else torch.zeros((output_dim))
-            data_label = torch.ones((output_dim)).to(device) if \
-                torch.sum(data_input[:,:n_feature//2,:]) > torch.sum(data_input)/2 else torch.zeros((output_dim)).to(device)
-            data_label = data_label.unsqueeze(0)
-            data_output = model(data_input)
-            loss = criterion(data_output, data_label)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
-        print('epoch :', e, total_loss/100)
 
     

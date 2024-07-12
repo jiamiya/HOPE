@@ -232,7 +232,7 @@ class CarParking(gym.Env):
             reward_info = self._get_reward(prev_state, self.vehicle.state)
         return reward_info
 
-    def step(self, action: Union[np.ndarray, int] = None):
+    def step(self, action:np.ndarray = None):
         '''
         Parameters:
         ----------

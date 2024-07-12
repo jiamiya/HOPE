@@ -49,7 +49,7 @@ class AgentBase(ABC):
     ) -> None:
         """Initialize the model structure here
         """
-        self.device = device#torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = device # torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.verbose = verbose
         self.configs = config_type(configs)
         self.check_list = []

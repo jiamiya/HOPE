@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from shapely import LineString, Point
+from shapely.geometry import LineString, Point
 from scipy.ndimage.filters import minimum_filter1d
 
 from configs import *
@@ -11,7 +11,7 @@ class ActionMask():
         self.vehicle_box_base = VehicleBox
         self.n_iter = n_iter
         self.action_space = discrete_actions
-        self.vehicle_boxes = self.init_vehicle_box() #(42, n_iter, 4, 2)
+        self.vehicle_boxes = self.init_vehicle_box() # (42, n_iter, 4, 2)
         self.lidar_num = LIDAR_NUM
         self.lidar_range = LIDAR_RANGE
         self.vehicle_lidar_base = self.get_vehicle_lidar_base()
@@ -212,8 +212,8 @@ class ActionMask():
         def calculate_probability(mean, std, values):
             z_scores = (values - mean) / std
             log_probabilities = -0.5 * z_scores ** 2 - np.log((np.sqrt(2 * np.pi) * std))
-            # print(log_probabilities)
             return np.sum(np.clip(log_probabilities, -10, 10), axis=1)
+
         possible_actions = np.array(self.action_space)
         # deal the scaling
         scale_steer = VALID_STEER[1]

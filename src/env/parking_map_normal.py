@@ -16,6 +16,8 @@ from configs import *
 DEBUG = False
 if DEBUG:
     import matplotlib.pyplot as plt
+
+# params for generating parking case
 prob_huge_obst = 0.5
 n_non_critical_car = 3
 prob_non_critical_car = 0.7
@@ -456,9 +458,6 @@ def generate_parallel_parking_case(map_level):
 
 
 class ParkingMapNormal(object):
-    default = {
-        "path": '../data/Case%d.csv'
-    }
     def __init__(self, map_level=MAP_LEVEL):
 
         self.case_id:int = None
