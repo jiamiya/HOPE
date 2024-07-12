@@ -7,7 +7,6 @@ parking
 *.jpg
 *.png
 *.csv
-data/
 
 # python
 __pycache__
