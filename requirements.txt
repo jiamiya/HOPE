@@ -9,4 +9,4 @@ tensorboard
 tqdm
 matplotlib
 einops
-pytorch
+
