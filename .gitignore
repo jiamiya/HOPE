@@ -4,8 +4,6 @@ log
 
 # data
 parking
-*.jpg
-*.png
 *.csv
 
 # python
