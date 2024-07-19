@@ -511,7 +511,6 @@ class CarParking(gym.Env):
         det[parallel_line_pos] = 1 # temporarily set "1" to avoid "divided by zero"
         raw_x = (b*f - c*e)/det # (4, E)
         raw_y = (c*d - a*f)/det
-        # print('prepare: ',time.time()-t1, len(vx1s), len(x1s[0]))
 
         collide_map_x = np.ones_like(raw_x, dtype=np.uint8)
         collide_map_y = np.ones_like(raw_x, dtype=np.uint8)

@@ -65,31 +65,6 @@ class KSModel(object):
         self.angle_range = angle_range
         self.mini_iter = 20
 
-        # correct the turning radius
-        self.correction = self.init_steer_correction()
-    
-    def init_steer_correction(self,):
-        x,y,heading = 0,0,0
-        ori_heading = heading
-        steer,speed = self.angle_range[1], self.speed_range[1]
-        iter = 10
-        for _ in range(iter):
-            for _ in range(self.mini_iter):
-                x += speed * np.cos(heading) * self.step_len/self.mini_iter 
-                y += speed * np.sin(heading) * self.step_len/self.mini_iter 
-                heading += \
-                    speed * np.tan(steer) / self.wheel_base * self.step_len/self.mini_iter 
-        
-        step_distance = speed*self.step_len*iter
-        gt_radius = WHEEL_BASE/np.tan(VALID_STEER[-1])
-        # gt_radius = WHEEL_BASE/np.tan(abs(steer))
-        turn_radius_angle = step_distance/gt_radius
-        x_origin = gt_radius*np.sin(ori_heading)
-        y_origin = gt_radius*(1-np.cos(ori_heading))
-        gt_x = gt_radius*np.sin(turn_radius_angle+ori_heading) - x_origin
-        gt_y = gt_radius*(1-np.cos(turn_radius_angle+ori_heading)) - y_origin
-        return gt_x/x, gt_y/y
-
 
     def step(self, state: State, action: list, step_time:int=NUM_STEP) -> State:
         """Update the state of a vehicle with the Kinematic Single-Track Model.
@@ -110,8 +85,6 @@ class KSModel(object):
         new_state.speed = np.clip(new_state.speed, *self.speed_range)
         new_state.steering = np.clip(new_state.steering, *self.angle_range)
 
-
-        # TODO: check correctness
         for _ in range(step_time):
             for _ in range(self.mini_iter):
                 x += new_state.speed * np.cos(new_state.heading) * self.step_len/self.mini_iter
@@ -119,18 +92,6 @@ class KSModel(object):
                 new_state.heading += \
                     new_state.speed * np.tan(new_state.steering) / self.wheel_base * self.step_len/self.mini_iter 
 
-            # # correct the simulation error
-            # kx, ky = self.correction
-            # x0, y0, theta = state.loc.x, state.loc.y, state.heading
-            # phi = np.arctan2(y-y0, x-x0)
-            # alpha = phi - theta
-            # r = np.sqrt((y-y0)**2 + (x-x0)**2)
-            # xt_, yt_ = r*np.cos(alpha)*kx, r*np.sin(alpha)*ky
-            # rt = np.sqrt(xt_**2 + yt_**2)
-            # beta = np.arctan2(yt_, xt_)
-            # x = rt*np.cos(theta+beta) + x0
-            # y = rt*np.sin(theta+beta) + y0
-        
         new_state.loc = Point(x, y)
         return new_state
 
