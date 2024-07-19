@@ -7,6 +7,7 @@ from shapely.geometry import LineString, Point
 from shapely.affinity import affine_transform
 
 from env.vehicle import State,VehicleBox
+from env.parking_map_grid import ParkingMapGrid
 
 ORIGIN = Point((0,0))
 
@@ -27,24 +28,59 @@ class LidarSimlator():
             self.lidar_lines.append(LineString(((0,0), (math.cos(a*math.pi/lidar_num*2)*lidar_range,\
                  math.sin(a*math.pi/lidar_num*2)*lidar_range))))
         self.vehicle_boundary = self.get_vehicle_boundary()
+        self.lidar_tolerance = 0.1
 
-    def get_observation(self, ego_state:State, obstacles:list):
+    def get_observation(self, ego_state:State, obstacles):
         '''
         Get the lidar observation from the vehicle's view.
 
         Args:
             ego_state: the state of ego car.
-            obstacles: the list of obstacles in map
+            obstacles: the list of obstacles in map, or the image of obstacles grid map.
 
         Return:
             lidar_obs(np.array): the lidar data in sequence of angle, with the length of lidar_num.
         '''
-
-        ego_pos = (ego_state.loc.x, ego_state.loc.y, ego_state.heading)
-        rotated_obstacles = self._rotate_and_filter_obstacles(ego_pos, obstacles)
-        lidar_obs = self._fast_calc_lidar_obs(rotated_obstacles)
-        return np.array(lidar_obs - self.vehicle_boundary)
+        if isinstance(obstacles, list):
+            ego_pos = (ego_state.loc.x, ego_state.loc.y, ego_state.heading)
+            rotated_obstacles = self._rotate_and_filter_obstacles(ego_pos, obstacles)
+            lidar_obs = self._fast_calc_lidar_obs(rotated_obstacles)
+        else:
+            lidar_obs = self._fast_calc_lidar_obs_on_grid(ego_state.get_pos(), obstacles)
+        lidar_obs = np.array(lidar_obs - self.vehicle_boundary)
+        lidar_obs = np.clip(lidar_obs-self.lidar_tolerance, 1e-4, self.lidar_range)
+        return lidar_obs
     
+    
+    def _fast_calc_lidar_obs_on_grid(self, ego_pos:tuple, grid_map:ParkingMapGrid):
+        x,y,yaw = ego_pos
+        lidar_range = self.lidar_range
+        xy_resolution = grid_map.xy_resolution
+        step_num = int(lidar_range/xy_resolution)
+        angles = yaw + np.arange(0, 2*np.pi, 2*np.pi/self.lidar_num) # (120,)
+        angles = angles.reshape(-1, 1) # (120,1)
+        steps = np.linspace(xy_resolution, lidar_range, step_num) # (1, 100)
+        pts_x = x + steps*np.cos(angles) # (120, 100)
+        pts_y = y + steps*np.sin(angles) # (120, 100)
+        pts = np.stack([pts_x, pts_y], axis=-1) # (120, 100, 2)
+        pts_coords = grid_map.coord2grid(pts.reshape(-1, 2)) # (120*100, 2) # .reshape(-1, step_num, 2)
+        # pts_coords = np.round(pts/xy_resolution).astype(np.int) # (120, 100, 2)
+        # transpose x and y, (n,2)->(n,2)
+        pts_coords = np.array([pts_coords[:,1], pts_coords[:,0]]).T.reshape(-1, step_num, 2) # (120, 100, 2)
+        pts_coords_outrange_x = np.logical_or(pts_coords[:,:,0]<0, pts_coords[:,:,0]>=grid_map.grid_map.shape[0]) # (120, 100)
+        pts_coords_outrange_y = np.logical_or(pts_coords[:,:,1]<0, pts_coords[:,:,1]>=grid_map.grid_map.shape[1]) # (120, 100)
+        pts_coords_outrange = np.logical_or(pts_coords_outrange_x, pts_coords_outrange_y) # (120, 100)
+        # tmperarily set the out of range points to the (0,0)
+        pts_coords[pts_coords_outrange] = np.array([0,0])
+        is_occupied = grid_map.grid_map[pts_coords[:,:,0], pts_coords[:,:,1]] # (120, 100)
+        # recover the out of range points to the max distance
+        is_occupied[pts_coords_outrange] = 0
+        is_occupied[:, -1] = 1
+        min_dist_idx = np.argmax(is_occupied, axis=1) # (120,)
+        lidar_obs = steps[min_dist_idx] # (120,)
+
+        return lidar_obs
+
     def get_vehicle_boundary(self, ):
         lidar_base = []
         for l in self.lidar_lines:

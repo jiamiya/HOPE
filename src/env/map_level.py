@@ -58,7 +58,7 @@ def get_map_level(start:State, dest:State, obstacle_list:list):
         # use shapely `MultiPoint.minimum_rotated_rectangle` method to get the minimum free space
         free_space_key_pts = []
         dest_heading = dest.heading
-        free_space_key_pts.append(_pt_translate(dest_lf, dest_heading, 0.2)) # TODO: hyperparam
+        free_space_key_pts.append(_pt_translate(dest_lf, dest_heading, 0.2))
         free_space_key_pts.append(_pt_translate(dest_rf, dest_heading, 0.2))
         free_space_key_pts.append(_pt_translate(dest_lf, dest_heading, BAY_PARK_WALL_DIST_DICT['Normal']-0.5))
         free_space_key_pts.append(_pt_translate(dest_rf, dest_heading, BAY_PARK_WALL_DIST_DICT['Normal']-0.5))

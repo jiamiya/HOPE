@@ -11,6 +11,7 @@ from typing import OrderedDict
 import random
 
 import numpy as np
+import cv2
 import gym
 from gym import spaces
 from gym.error import DependencyNotInstalled
@@ -31,6 +32,7 @@ from env.map_base import *
 from env.lidar_simulator import LidarSimlator
 from env.parking_map_normal import ParkingMapNormal
 from env.parking_map_dlp import ParkingMapDLP
+from env.parking_map_grid import ParkingMapGrid
 import env.reeds_shepp as rsCurve
 from env.observation_processor import Obs_Processor
 from model.action_mask import ActionMask
@@ -68,13 +70,22 @@ class CarParking(gym.Env):
         self.is_open = True
         self.t = 0.0
         self.k = None
-        self.level = MAP_LEVEL
+        self.map_type = MAP_LEVEL
         self.tgt_repr_size = 5 # relative_distance, cos(theta), sin(theta), cos(phi), sin(phi)
 
-        if self.level in ['Normal', 'Complex', 'Extrem']:
-            self.map = ParkingMapNormal(self.level)
-        elif self.level == 'dlp':
-            self.map = ParkingMapDLP()
+        parking_map_normal = ParkingMapNormal('Normal')
+        parking_map_complex = ParkingMapNormal('Complex')
+        parking_map_extrem = ParkingMapNormal('Extrem')
+        parking_map_dlp = ParkingMapDLP()
+        parking_map_grid = ParkingMapGrid()
+        self.parking_maps = {
+            'Normal': parking_map_normal,
+            'Complex': parking_map_complex,
+            'Extrem': parking_map_extrem,
+            'dlp': parking_map_dlp,
+            'grid': parking_map_grid,
+        }
+        self.map = self.parking_maps[self.map_type]
         self.vehicle = Vehicle(n_step=NUM_STEP, step_len=STEP_LENGTH)
         self.lidar = LidarSimlator(LIDAR_RANGE, LIDAR_NUM)
         self.reward = 0.0
@@ -114,24 +125,18 @@ class CarParking(gym.Env):
             low=low_bound, high=high_bound, shape=(self.tgt_repr_size,), dtype=np.float64
         )
     
-    def set_level(self, level:str=None):
-        if level is None:
-            self.map = ParkingMapNormal()
-            return
-        self.level = level
-        if self.level in ['Normal', 'Complex', 'Extrem',]:
-            self.map = ParkingMapNormal(self.level)
-        elif self.level == 'dlp':
-            self.map = ParkingMapDLP()
+    def set_level(self, map_type:str=None):
+        self.map_type = map_type
+        self.map = self.parking_maps[map_type]
 
-    def reset(self, case_id: int = None, data_dir: str = None, level: str = None,) -> np.ndarray:
+    def reset(self, case_id: int = None, data_dir: str = None, map_type: str = None,) -> np.ndarray:
         self.reward = 0.0
         self.prev_reward = 0.0
         self.accum_arrive_reward = 0.0
         self.t = 0.0
 
-        if level is not None:
-            self.set_level(level)
+        if map_type is not None:
+            self.set_level(map_type)
         initial_state = self.map.reset(case_id, data_dir)
         self.vehicle.reset(initial_state)
         self.matrix = self.coord_transform_matrix()
@@ -151,6 +156,8 @@ class CarParking(gym.Env):
         return list(transformed.coords)
 
     def _detect_collision(self):
+        if self.map_type == 'grid':
+            return self.map.collision_ckeck([self.vehicle.state.get_pos()])
         # return False
         for obstacle in self.map.obstacles:
             if self.vehicle.box.intersects(obstacle.shape):
@@ -298,11 +305,30 @@ class CarParking(gym.Env):
 
         return observation, reward_info, status, info
 
+    
+    def grid_map_to_surface_with_coords(self, surface:pygame.Surface):
+        k, bx, by = self.matrix[-3:]
+        k = k
+        grid_map =self.map.grid_map
+        img = np.zeros((*grid_map.shape, 3), dtype=np.uint8)
+        img[grid_map != 0] = OBSTACLE_COLOR[:3]
+        img[grid_map == 0] = BG_COLOR[:3]
+        img_scaled = cv2.resize(img, (int(img.shape[1] * k*self.map.xy_resolution),\
+                     int(img.shape[0] * k*self.map.xy_resolution)), interpolation=cv2.INTER_NEAREST)
+        
+        img_surface = pygame.surfarray.make_surface(np.transpose(img_scaled, (1, 0, 2)))
+        
+        surface_origin = (int((WIN_W - img_surface.get_width())/2), int((WIN_H - img_surface.get_height())/2))
+        surface.blit(img_surface, surface_origin)
+
     def _render(self, surface: pygame.Surface):
         surface.fill(BG_COLOR)
-        for obstacle in self.map.obstacles:
-            pygame.draw.polygon(
-                surface, OBSTACLE_COLOR, self._coord_transform(obstacle.shape))
+        if self.map_type == 'grid':
+            self.grid_map_to_surface_with_coords(surface)
+        else:
+            for obstacle in self.map.obstacles:
+                pygame.draw.polygon(
+                    surface, OBSTACLE_COLOR, self._coord_transform(obstacle.shape))
 
         pygame.draw.polygon(
             surface, START_COLOR, self._coord_transform(self.map.start_box), width=1)
@@ -365,8 +391,11 @@ class CarParking(gym.Env):
         return processed_img
 
     def _get_lidar_observation(self,):
-        obs_list = [obs.shape for obs in self.map.obstacles]
-        lidar_view = self.lidar.get_observation(self.vehicle.state, obs_list)
+        if self.map_type == 'grid':
+            obstacles = self.map
+        else:
+            obstacles = [obs.shape for obs in self.map.obstacles]
+        lidar_view = self.lidar.get_observation(self.vehicle.state, obstacles)
         return lidar_view
     
     def _get_targt_repr(self,):
@@ -450,6 +479,8 @@ class CarParking(gym.Env):
         return None
     
     def is_traj_valid(self, traj):
+        if self.map_type == 'grid':
+            return not self.map.collision_ckeck(traj)
         car_coords1 = np.array(VehicleBox.coords)[:4] # (4,2)
         car_coords2 = np.array(VehicleBox.coords)[1:] # (4,2)
         car_coords_x1 = car_coords1[:,0].reshape(1,-1)
@@ -511,7 +542,6 @@ class CarParking(gym.Env):
         det[parallel_line_pos] = 1 # temporarily set "1" to avoid "divided by zero"
         raw_x = (b*f - c*e)/det # (4, E)
         raw_y = (c*d - a*f)/det
-        # print('prepare: ',time.time()-t1, len(vx1s), len(x1s[0]))
 
         collide_map_x = np.ones_like(raw_x, dtype=np.uint8)
         collide_map_y = np.ones_like(raw_x, dtype=np.uint8)
