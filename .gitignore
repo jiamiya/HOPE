@@ -1,6 +1,7 @@
 # custom
 log/
 log
+**/data/
 
 # data
 parking
