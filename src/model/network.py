@@ -42,6 +42,9 @@ class MultiObsEmbedding(nn.Module):
         self.use_attention = False if configs['attention_configs'] is None else True
         self.input_action = 'input_action_dim' in configs and configs['input_action_dim'] > 0
 
+        # for visualization
+        self.current_embedding = []
+
         if not self.use_attention:
             if configs['n_hidden_layers'] == 1:
                 layers = [nn.Linear(configs['n_modal']*embed_size, configs['output_size'])]
@@ -191,8 +194,11 @@ class MultiObsEmbedding(nn.Module):
         else:
             embed = cat(features, dim=1)
         out = self.net(embed)
+        # for visualization
+        self.current_embedding = [embed.detach().cpu().numpy(), out.detach().cpu().numpy()]
         if self.output_layer is not None:
             out = self.output_layer(out)
+        
         return out
 
 class ConvBlock(nn.Module):

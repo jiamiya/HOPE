@@ -40,6 +40,8 @@ class ParkingMapGrid(object):
             data_files.sort()
             self.map_data = []
             for data_file in data_files:
+                if '.' not in data_file:
+                    continue
                 with open(os.path.join(self.default['data_dir'], data_file), 'rb') as f:
                     data = pickle.load(f)
                     self.map_data.append(data)
@@ -100,6 +102,7 @@ class ParkingMapGrid(object):
     def reset(self, case_id:int, data_dir:str=None):
         case_id = self.case_ids[case_id % len(self.case_ids)]
         data = self.map_data[case_id]
+        self.data = data
         self.grid_map = data['gridmap']
         self.origin_roi = data['map_range']
         self.xmin = self.origin_roi[0]
