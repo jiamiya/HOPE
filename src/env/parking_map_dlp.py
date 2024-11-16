@@ -113,8 +113,6 @@ class ParkingMapDLP(object):
     def change_start_dest(self,):
         self.start, self.dest = self.dest, self.start
         self.start_box, self.dest_box = self.dest_box, self.start_box
-        # if len(self.map_data[self.case_id]) == 4:
-        #     self.traj_path = [self.traj_path[-(i+1)] for i in range(len(self.traj_path))]
 
     def _flip_box_orientation(self, target_state:State):
         x, y, heading = target_state.get_pos()
