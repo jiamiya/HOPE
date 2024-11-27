@@ -18,6 +18,18 @@ class ParkingMapGrid(object):
     default = {
         'data_dir': '../data/grid_map',
     }
+    '''
+    in each data file contains a dict:
+    {
+        'gridmap': grid_map,
+        'map_range': origin_roi,
+        'starts': [start],
+        'goal': dest,
+        'ref_traj_thick': thick_traj, (optional)
+        'ref_traj': vehicle_traj, (optional)
+        'xy_resolution': xy_resolution
+    }
+    '''
     def __init__(self, xy_reoslution=0.1):
 
         self.case_id:int = -1

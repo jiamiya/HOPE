@@ -10,11 +10,17 @@ SEED = 42
 
 #########################
 # vehicle
-WHEEL_BASE = 2.8  # wheelbase
-FRONT_HANG = 0.96  # front hang length
-REAR_HANG = 0.93  # rear hang length
-LENGTH = WHEEL_BASE+FRONT_HANG+REAR_HANG
-WIDTH = 1.94  # width
+# WHEEL_BASE = 2.8  # wheelbase
+# FRONT_HANG = 0.96  # front hang length
+# REAR_HANG = 0.93  # rear hang length
+# LENGTH = WHEEL_BASE+FRONT_HANG+REAR_HANG
+# WIDTH = 1.94  # width
+
+WHEEL_BASE = 2.65  # wheelbase
+FRONT_HANG = 0.905  # front hang length
+REAR_HANG = 0.96  # rear hang length
+LENGTH = 4.515
+WIDTH = 1.86  # width
 
 from shapely.geometry import LinearRing
 VehicleBox = LinearRing([
@@ -30,7 +36,9 @@ COLOR_POOL = [
 ]
 
 VALID_SPEED = [-2.5, 2.5]
-VALID_STEER = [-0.75, 0.75]
+# VALID_STEER = [-0.75, 0.75]
+_max_steer = 0.4
+VALID_STEER = [-_max_steer, _max_steer] # 0.449
 VALID_ACCEL = [-1.0, 1.0]
 VALID_ANGULAR_SPEED = [-0.5, 0.5]
 
